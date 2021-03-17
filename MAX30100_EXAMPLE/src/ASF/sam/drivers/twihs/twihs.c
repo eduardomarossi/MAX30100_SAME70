@@ -256,7 +256,6 @@ static uint32_t twihs_mk_addr(const uint8_t *addr, int len)
 	}
 	return val;
 }
-
 /**
  * \brief Read multiple bytes from a TWIHS compatible slave device.
  *
@@ -336,10 +335,10 @@ uint32_t twihs_master_write(Twihs *p_twihs, twihs_packet_t *p_packet)
 	uint32_t status, cnt = p_packet->length;
 	uint8_t *buffer = p_packet->buffer;
 
-	/* Check argument
+	// Check argument
 	if (cnt == 0) {
 		return TWIHS_INVALID_ARGUMENT;
-	}*/
+	}
 
 	/* Set write mode, slave address and 3 internal address byte lengths */
 	p_twihs->TWIHS_MMR = 0;

@@ -1,18 +1,10 @@
-// Baesado em https://github.com/adafruit/Adafruit_MAX30100
-
-// WIP 
-// 07/02/2020 - Eduardo: temperatura funciona. Leitura e comandos de configuração falham.
-
-
 #include "asf.h"
 #include "stdio_serial.h"
 #include "conf_board.h"
 #include "max30100.h"
 
+#define MAX30100_FIFO_DEPTH                     0x10
 
-#define ACTIVE_LEDS 2
-#define I2C_BUFFER_LENGTH 64
-#define MAX30100_MAX_BUFFER 32
 
 /** Global timestamp in milliseconds since start of application */
 volatile uint32_t g_ul_ms_ticks = 0;
@@ -82,49 +74,7 @@ void max30100_read(uint8_t *buffer, uint32_t bufferlen) {
 			/* Capture error */
 		}
 	}
-}
-
-
-void max30100_read_reg(uint8_t addr, uint8_t *buffer, uint32_t bufferlen) {
-	twihs_packet_t packet_tx, packet_rx;
-	uint8_t buffer_tx[1];
-	
-	buffer_tx[0] = addr;
-	
-	/* Configure the data packet to be transmitted */
-	packet_tx.chip        = MAX30100_CHIP_ID;
-	packet_tx.addr[0]     = addr;
-	packet_tx.addr_length = 1;
-	packet_tx.buffer      = (uint8_t *) buffer_tx;
-	packet_tx.length      = 0;
-
-	/* Configure the data packet to be received */
-	packet_rx.chip        = MAX30100_CHIP_ID;
-	packet_rx.addr[0]     = addr;
-	packet_rx.addr_length = 1;
-	packet_rx.buffer      = buffer;
-	packet_rx.length      = bufferlen;
-	
-	/* Send test pattern to EEPROM */
-	if (twihs_master_write(MAX30100_I2C, &packet_tx) != TWIHS_SUCCESS) {
-		puts("-E-\tTWI master write packet failed.\r");
-		while (1) {
-			
-		}
-	}
-	
 	mdelay(WAIT_TIME);
-	
-	
-	/* Get memory from EEPROM*/
-	uint32_t ret = twihs_master_read(MAX30100_I2C, &packet_rx);
-	
-	if (ret != TWIHS_SUCCESS) {
-		puts("-E-\tTWI master read packet failed.\r");
-		while (1) {
-			/* Capture error */
-		}
-	}
 }
 
 void max30100_write_reg(uint8_t addr, uint8_t *buffer, uint32_t bufferlen) {
@@ -167,31 +117,60 @@ void max30100_write8(uint8_t val) {
 	mdelay(WAIT_TIME);
 }
 
-
+/*
 uint8_t max30100_read_reg8(uint8_t addr) {
 	uint8_t data;
 	
 	max30100_read_reg(addr, &data, 1);
 	return data;
 }
+*/
 
-uint8_t max30100_read_reg32(uint8_t addr) {
-	uint32_t data;
-	
-	max30100_read_reg(addr, &data, 4);
-	return data;
-}
+uint8_t max30100_read_reg8(uint8_t addr) {
+	twihs_packet_t packet_rx;
+	uint8_t buffer[1];
+	buffer[0] = 0x00;
 
-uint16_t max30100_read_reg16(uint8_t addr) {
-	uint16_t data;
+	/* Configure the data packet to be received */
+	packet_rx.chip        = MAX30100_CHIP_ID;
+	packet_rx.addr[0]     = addr;
+	packet_rx.addr_length = 1;
+	packet_rx.buffer      = &buffer[0];
+	packet_rx.length      = 1;
 	
-	max30100_read_reg(addr, &data, 2);
-	return data;
+	
+	/* Get memory from EEPROM*/
+	uint32_t ret = twihs_master_read(MAX30100_I2C, &packet_rx);
+	
+	if (ret != TWIHS_SUCCESS) {
+		puts("-E-\tTWI master read packet failed.\r");
+		while (1) {
+			/* Capture error */
+		}
+	}
+	return  buffer[0];
+	mdelay(WAIT_TIME);
 }
 
 
 void max30100_write_reg8(uint8_t addr, uint8_t value) {
-	max30100_write_reg(addr, &value, 1);
+	twihs_packet_t packet_tx;
+
+	/* Configure the data packet to be transmitted */
+	packet_tx.chip        = MAX30100_CHIP_ID;
+	packet_tx.addr[0]     = addr;
+	packet_tx.addr_length = 1;
+	packet_tx.buffer      = &value;
+	packet_tx.length      = 1;
+
+	if (twihs_master_write(MAX30100_I2C, &packet_tx) != TWIHS_SUCCESS) {
+		puts("-E-\tTWI master write packet failed.\r");
+		while (1) {
+			
+		}
+	}
+	
+	mdelay(WAIT_TIME);
 }
 
 
@@ -205,8 +184,8 @@ float max30100_read_temperature() {
 		  mdelay(1);
 	  }
 
-	  uint16_t tempreading = max30100_read_reg16(MAX30100_TEMPDATAINT_REG);
-
+	  //uint16_t tempreading = max30100_read_reg16(MAX30100_TEMPDATAINT_REG);
+		uint16_t tempreading = 0;
 	  uint8_t tfrac = tempreading & 0xF;
 	  int8_t tint = tempreading >> 8;
 
@@ -217,121 +196,39 @@ float max30100_read_temperature() {
 }
 
 void max30100_setspo2samplerate(max30100_spo2_samplerate_t rate) {
-	uint8_t v;
-	v = max30100_read_reg8(MAX30100_SPO2CFG_REG);
-
-	v &= 0b11100011; // clear out old settings
-	v |= rate << 2;
-	max30100_write_reg8(MAX30100_SPO2CFG_REG, v);
+	int previous = max30100_read_reg8(MAX30100_SPO2CFG_REG);
+	printf(" read %d \r\n", previous);
+	int value;
+	if(previous == 0x47) {
+		previous = 0x03;
+		value = 0x07;
+	} else {
+		value = (previous & 0xe3) | (rate << 2);
+	}
+	max30100_write_reg8(MAX30100_SPO2CFG_REG, 0x47);
 }
 
-max30100_spo2_samplerate_t max30100_getspo2samplerate(void) {
-	uint8_t v;
-	v = max30100_read_reg8(MAX30100_SPO2CFG_REG);
-	v >>= 2;
-	v &= 0x7; // mask off only the 3 bits
+#define MAX30100_SPC_SPO2_HI_RES_EN             (1 << 6)
 
-	return (max30100_spo2_samplerate_t)v;
-}
+void max30100_set_highres_mode(uint8_t enabled) {
+	uint8_t previous = max30100_read_reg8(MAX30100_SPO2CFG_REG);
 
-void max30100_clearfifo() {
-	max30100_write_reg8(MAX30100_FIFO_WRPTR_REG, 0);
-	max30100_write_reg8(MAX30100_FIFO_OVERFLOW_REG, 0);
-	max30100_write_reg8(MAX30100_FIFO_RDPTR_REG, 0);
-}
-
-
-uint8_t max30100_readfifo(uint32_t *fifoptr, uint8_t maxentries) {
-	uint32_t t;
-	int8_t numsamples = 0;
-	uint8_t buffer[64];
-	
-	do {
-		int8_t wrptr = max30100_read_reg8(MAX30100_FIFO_WRPTR_REG);
-		int8_t rdptr = max30100_read_reg8(MAX30100_FIFO_RDPTR_REG);
-	  
-		numsamples = wrptr - rdptr;
-		if (numsamples < 0) numsamples +=16;
-	  
-		numsamples = min(maxentries, numsamples);
-		printf("%d samples avail", numsamples);
-		mdelay(2000);
-	  } while (numsamples < maxentries);
-
-	max30100_write8(MAX30100_FIFO_DATA_REG);
-	max30100_read(buffer, numsamples *4 );
-	  for (uint8_t i=0; i<8; i++) {
-		  t = buffer[i*4];
-		  t <<= 8;
-		  t |= buffer[i*4+1];
-		  t <<= 8;
-		  t |= buffer[i*4+2];
-		  t <<= 8;
-		  t |= buffer[i*4+3];
-
-		  fifoptr[i] = t;
-	  }
-	  return numsamples;
-}
-
-void max30100_start_read() {
-	//max30100_write_reg8(MAX30100_MODECFG_REG, 0x0); // disable
-	//mdelay(10);
-
-	// set to spo2 + HR mode
-
+	    if (enabled) {
+		    //max30100_write_reg8(MAX30100_SPO2CFG_REG, previous | MAX30100_SPC_SPO2_HI_RES_EN);
+		    } else {
+		    //max30100_write_reg8(MAX30100_SPO2CFG_REG, previous & ~MAX30100_SPC_SPO2_HI_RES_EN);
+	    }
+	max30100_write_reg8(MAX30100_SPO2CFG_REG, 0x47);
 }
 
 void max30100_set_led_pulse_width(max30100_led_pulsewidth_t pw) {
-	uint8_t v;
-	v = max30100_read_reg8(MAX30100_SPO2CFG_REG);
-	v &= 0b11111100; // clear out old settings
-	v |= pw;
-	max30100_write_reg8(MAX30100_SPO2CFG_REG, v);
+	uint8_t v = max30100_read_reg8(MAX30100_SPO2CFG_REG);
+	uint8_t a = (v & 0xfc) | pw;
+	max30100_write_reg8(MAX30100_SPO2CFG_REG, 0x47);  // c -> 1100 & 0x03 -> 0 | 
 }
 
-max30100_led_pulsewidth_t max30100_get_led_pulse_width(void) {
-	uint8_t v;
-	v = max30100_read_reg8(MAX30100_SPO2CFG_REG);
-	v &= 0x03;
-	return (max30100_led_pulsewidth_t)v;
-}
-
-void max30100_set_red_led_current(max30100_led_current_t i) {
-	uint8_t v;
-	v = max30100_read_reg8(MAX30100_LEDCFG_REG);
-	v &= 0x0F; // clear out old settings
-	v |= i << 4;
-	max30100_write_reg8(MAX30100_LEDCFG_REG, v);
-}
-
-max30100_led_current_t max30100_get_red_led_current() {
-	uint8_t v;
-	v = max30100_read_reg8(MAX30100_LEDCFG_REG);
-	return (max30100_led_current_t)(v >> 4);
-}
-
-void max30100_get_interrupt_status() {
-	return max30100_read_reg8(MAX30100_IRQSTAT_REG);
-}
-
-void max30100_set_interrupt_flag(uint8_t interrupt) {
-	max30100_write_reg8(MAX30100_IRQENABLE_REG, interrupt);
-}
-
-
-void max30100_set_ir_led_current(max30100_led_current_t i) {
-	uint8_t v;
-	v = max30100_read_reg8(MAX30100_LEDCFG_REG);
-	v &= 0xF0; // clear out old settings
-	v |= i;
-	max30100_write_reg8(MAX30100_LEDCFG_REG, v);
-}
-
-max30100_led_current_t max30100_get_ir_led_current() {
-	uint8_t v;
-	v = max30100_read_reg8(MAX30100_LEDCFG_REG);
-	return (max30100_led_current_t)(v & 0xF);
+void max30100_set_leds_current(uint32_t irLedCurrent, uint32_t redLedCurrent) {
+	max30100_write_reg8(MAX30100_LEDCFG_REG, redLedCurrent << 4 | irLedCurrent);
 }
 
 
@@ -341,6 +238,7 @@ void max30100_init() {
 	/* Configure the options of TWI driver */
 	opt.master_clk = sysclk_get_peripheral_hz();
 	opt.speed      = TWIHS_CLK;
+	opt.smbus = 0;
 	
 	/* Enable the peripheral clock for TWI */
 	pmc_enable_periph_clk(MAX30100_I2C_ID);
@@ -359,12 +257,40 @@ void max30100_init() {
 	
 	max30100_write_reg8(MAX30100_MODECFG_REG, MAX30100_MODECFG_HRONLY);
 	max30100_set_led_pulse_width(MAX30100_LEDPW_1600US);
-	max30100_set_ir_led_current(MAX30100_LEDCURRENT_50MA);
-	max30100_set_red_led_current(MAX30100_LEDCURRENT_50MA);
-	max30100_write_reg8(MAX30100_SPO2CFG_REG, MAX30100_SPO2CFG_HIGHRES);
-
-	
+	max30100_setspo2samplerate(MAX30100_SPO2SR_100HZ);
+	max30100_set_leds_current(MAX30100_LEDCURRENT_50MA, MAX30100_LEDCURRENT_50MA);
+	max30100_set_highres_mode(1);
 }
+
+
+void max30100_read_fifo_data()
+{
+	uint8_t buffer[MAX30100_FIFO_DEPTH*4];
+	uint8_t toRead;
+	static uint8_t descartes = 0;
+	
+	toRead = (max30100_read_reg8(MAX30100_FIFO_WRPTR_REG) - max30100_read_reg8(MAX30100_FIFO_RDPTR_REG)) & (MAX30100_FIFO_DEPTH-1);
+
+	if (toRead && descartes > 20) {
+		while(1) {
+			printf("u did it");
+			delay_ms(500);
+		}
+		
+		//max30100_read_reg(MAX30100_FIFO_DATA_REG, buffer, 4 * toRead);
+
+		for (uint8_t i=0 ; i < toRead ; ++i) {
+			// Warning: the values are always left-aligned
+			uint16_t ir=(uint16_t)((buffer[i*4] << 8) | buffer[i*4 + 1]);
+			uint16_t red = (uint16_t)((buffer[i*4 + 2] << 8) | buffer[i*4 + 3]);
+			printf("%d %d\r\n", ir, red);
+		}
+	} else {
+		descartes++;
+	}
+}
+
+
 
 /**
  * \brief Application entry point for TWI EEPROM example.
@@ -373,17 +299,13 @@ void max30100_init() {
  */
 int main(void)
 {
-	uint32_t buffer[16];
-	
 	/* Initialize the SAM system */
 	sysclk_init();
 
 	/* Initialize the board */
 	board_init();
-
-    /* Initialize the console UART */
+	
 	configure_console();
-	pio_configure(PIOB, PIO_INPUT, 1 << 1, PIO_DEFAULT);
 	
 	/* Configure systick for 1 ms */
 	puts("Configure system tick to get 1ms tick period.\r");
@@ -396,89 +318,15 @@ int main(void)
 	
 	max30100_init();
 	puts("MAX30100 detected!");
-	puts("MAX30100 reset complete");
 	
-	max30100_setspo2samplerate(MAX30100_SPO2SR_50HZ);
-	max30100_spo2_samplerate_t rate = max30100_getspo2samplerate();
-	uint16_t ratehz = 0;
-	switch (rate) {
-		case MAX30100_SPO2SR_50HZ: ratehz = 50; break;
-		case MAX30100_SPO2SR_100HZ: ratehz = 100; break;
-		case MAX30100_SPO2SR_167HZ: ratehz = 167; break;
-		case MAX30100_SPO2SR_200HZ: ratehz = 200; break;
-		case MAX30100_SPO2SR_400HZ: ratehz = 400; break;
-		case MAX30100_SPO2SR_600HZ: ratehz = 600; break;
-		case MAX30100_SPO2SR_800HZ: ratehz = 800; break;
-		case MAX30100_SPO2SR_1000HZ: ratehz = 1000; break;
-	}
-	printf("SpO2 sample rate = %d Hz\n", ratehz); 
-	
-	max30100_set_led_pulse_width(MAX30100_LEDPW_1600US);
-	max30100_led_pulsewidth_t width = max30100_get_led_pulse_width();
-	uint16_t pulsewidth = 0;
-	switch (width) {
-		case  MAX30100_LEDPW_200US: pulsewidth = 200; break;
-		case  MAX30100_LEDPW_400US: pulsewidth = 400; break;
-		case  MAX30100_LEDPW_800US: pulsewidth = 800; break;
-		case  MAX30100_LEDPW_1600US: pulsewidth = 1600; break;
-	}
-	printf("LED pulse width = %d uS\n", pulsewidth); 
-	
-	max30100_set_red_led_current(MAX30100_LEDCURRENT_27_1MA);
-	max30100_set_ir_led_current(MAX30100_LEDCURRENT_50MA);
-	max30100_led_current_t red = max30100_get_red_led_current();
-	max30100_led_current_t ir = max30100_get_ir_led_current();
 	max30100_write_reg8(MAX30100_MODECFG_REG, MAX30100_MODECFG_HRSP02);
-	float ledcurrent = 0;
-	switch (red) {
-		case MAX30100_LEDCURRENT_0MA:    ledcurrent = 0; break;
-		case MAX30100_LEDCURRENT_4_4MA:  ledcurrent = 4.4; break;
-		case MAX30100_LEDCURRENT_7_6MA:  ledcurrent = 7.6; break;
-		case MAX30100_LEDCURRENT_11MA:   ledcurrent = 11; break;
-		case MAX30100_LEDCURRENT_14_2MA: ledcurrent = 14.2; break;
-		case MAX30100_LEDCURRENT_17_4MA: ledcurrent = 17.4; break;
-		case MAX30100_LEDCURRENT_20_8MA: ledcurrent = 20.8; break;
-		case MAX30100_LEDCURRENT_24MA:   ledcurrent = 24; break;
-		case MAX30100_LEDCURRENT_27_1MA: ledcurrent = 27.1; break;
-		case MAX30100_LEDCURRENT_30_6MA: ledcurrent = 30.6; break;
-		case MAX30100_LEDCURRENT_33_8MA: ledcurrent = 33.8; break;
-		case MAX30100_LEDCURRENT_37MA:   ledcurrent = 37; break;
-		case MAX30100_LEDCURRENT_40_2MA: ledcurrent = 40.2; break;
-		case MAX30100_LEDCURRENT_43_6MA: ledcurrent = 43.6; break;
-		case MAX30100_LEDCURRENT_46_8MA: ledcurrent = 46.8; break;
-		case MAX30100_LEDCURRENT_50MA:   ledcurrent = 50; break;
-	}
-    printf("Red LED current = %f mA\n", ledcurrent); 
-
-	switch (ir) {
-		case MAX30100_LEDCURRENT_0MA:    ledcurrent = 0; break;
-		case MAX30100_LEDCURRENT_4_4MA:  ledcurrent = 4.4; break;
-		case MAX30100_LEDCURRENT_7_6MA:  ledcurrent = 7.6; break;
-		case MAX30100_LEDCURRENT_11MA:   ledcurrent = 11; break;
-		case MAX30100_LEDCURRENT_14_2MA: ledcurrent = 14.2; break;
-		case MAX30100_LEDCURRENT_17_4MA: ledcurrent = 17.4; break;
-		case MAX30100_LEDCURRENT_20_8MA: ledcurrent = 20.8; break;
-		case MAX30100_LEDCURRENT_24MA:   ledcurrent = 24; break;
-		case MAX30100_LEDCURRENT_27_1MA: ledcurrent = 27.1; break;
-		case MAX30100_LEDCURRENT_30_6MA: ledcurrent = 30.6; break;
-		case MAX30100_LEDCURRENT_33_8MA: ledcurrent = 33.8; break;
-		case MAX30100_LEDCURRENT_37MA:   ledcurrent = 37; break;
-		case MAX30100_LEDCURRENT_40_2MA: ledcurrent = 40.2; break;
-		case MAX30100_LEDCURRENT_43_6MA: ledcurrent = 43.6; break;
-		case MAX30100_LEDCURRENT_46_8MA: ledcurrent = 46.8; break;
-		case MAX30100_LEDCURRENT_50MA:   ledcurrent = 50; break;
-	}
-	printf("IR LED current = %f mA\n", ledcurrent); 
-
-	//max30100_start_read();
+	max30100_set_leds_current(MAX30100_LEDCURRENT_50MA, MAX30100_LEDCURRENT_27_1MA);
+	max30100_set_led_pulse_width(MAX30100_LEDPW_1600US);
+	max30100_setspo2samplerate(MAX30100_SPO2SR_100HZ);
+	max30100_set_highres_mode(1);
+	
 
 	while (1) {
-		uint8_t read = max30100_readfifo(buffer, 16);
-		printf("got %d reads\n", read);
-		for(int i = 0; i < read; i++) {
-			printf("%d ", buffer[i]);
-		}
-		printf("\n");
-		mdelay(20000);
+		max30100_read_fifo_data();
 	}
 }
