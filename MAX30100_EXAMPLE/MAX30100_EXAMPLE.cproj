@@ -271,6 +271,22 @@
         <board id="board.same70_xplained" value="Add" config="" content-id="Atmel.ASF" />
       </framework-data>
     </AsfFrameworkConfig>
+    <avrtool>com.atmel.avrdbg.tool.edbg</avrtool>
+    <avrtoolserialnumber>ATML2637010000000006</avrtoolserialnumber>
+    <avrdeviceexpectedsignature>0xA1020E01</avrdeviceexpectedsignature>
+    <avrtoolinterface>SWD</avrtoolinterface>
+    <com_atmel_avrdbg_tool_edbg>
+      <ToolOptions>
+        <InterfaceProperties>
+          <SwdClock>2000000</SwdClock>
+        </InterfaceProperties>
+        <InterfaceName>SWD</InterfaceName>
+      </ToolOptions>
+      <ToolType>com.atmel.avrdbg.tool.edbg</ToolType>
+      <ToolNumber>ATML2637010000000006</ToolNumber>
+      <ToolName>EDBG</ToolName>
+    </com_atmel_avrdbg_tool_edbg>
+    <avrtoolinterfaceclock>2000000</avrtoolinterfaceclock>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <ToolchainSettings>
@@ -1209,7 +1225,40 @@
     <Compile Include="src\ASF\sam\utils\syscalls\gcc\syscalls.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\beatdetector.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\beatdetector.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\fifo.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\fifo.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\max30100.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\max30100.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\pulse_oximeter.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\pulse_oximeter.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\spo2_calculator.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\spo2_calculator.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\time_utils.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\time_utils.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\twihs_master_example.c">

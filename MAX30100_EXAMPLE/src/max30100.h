@@ -19,16 +19,13 @@
 #define MAX30100_I2C      TWIHS0
 #define MAX30100_I2C_ID   ID_TWIHS0
 
-
 #define MAX30100_ADDRESS           0x50
 #define MAX30100_ADDRESS_LENGTH    0
-#define MAX30100_CHIP_ID 0x57
+#define MAX30100_CHIP_ID  0x57
 
 #define MAX30100_REG_PARTID 0xFF
 #define MAX30100_EXPECTED_PARTID 0x11
 
-#define MAX30100_DEFAULT_ADDRESS         (0x57)
-#define MAX30100_FIFO_OVERFLOW_REG 0x03
 #define MAX30100_TEMPDATAINT_REG         0x16
 #define MAX30100_TEMPDATAFRAC_REG        0x17
 
@@ -61,45 +58,39 @@
 #define MAX30100_SPO2CFG_HIGHRES         0x40
 
 #define MAX30100_LEDCFG_REG              0x09
+#define MAX30100_FIFO_DEPTH  0x10
 
-typedef enum
-{
-	MAX30100_SPO2SR_50HZ         = 0b000,
-	MAX30100_SPO2SR_100HZ        = 0b001,
-	MAX30100_SPO2SR_167HZ        = 0b010,
-	MAX30100_SPO2SR_200HZ        = 0b011,
-	MAX30100_SPO2SR_400HZ        = 0b100,
-	MAX30100_SPO2SR_600HZ        = 0b101,
-	MAX30100_SPO2SR_800HZ        = 0b110,
-	MAX30100_SPO2SR_1000HZ       = 0b111,
+#define MAX30100_REG_LED_CONFIGURATION          0x09
+typedef enum LEDCurrent {
+	MAX30100_LED_CURR_0MA      = 0x00,
+	MAX30100_LED_CURR_4_4MA    = 0x01,
+	MAX30100_LED_CURR_7_6MA    = 0x02,
+	MAX30100_LED_CURR_11MA     = 0x03,
+	MAX30100_LED_CURR_14_2MA   = 0x04,
+	MAX30100_LED_CURR_17_4MA   = 0x05,
+	MAX30100_LED_CURR_20_8MA   = 0x06,
+	MAX30100_LED_CURR_24MA     = 0x07,
+	MAX30100_LED_CURR_27_1MA   = 0x08,
+	MAX30100_LED_CURR_30_6MA   = 0x09,
+	MAX30100_LED_CURR_33_8MA   = 0x0a,
+	MAX30100_LED_CURR_37MA     = 0x0b,
+	MAX30100_LED_CURR_40_2MA   = 0x0c,
+	MAX30100_LED_CURR_43_6MA   = 0x0d,
+	MAX30100_LED_CURR_46_8MA   = 0x0e,
+	MAX30100_LED_CURR_50MA     = 0x0f
+} LEDCurrent;
 
-} max30100_spo2_samplerate_t;
 
-typedef enum
-{
-	MAX30100_LEDPW_200US         = 0b00,
-	MAX30100_LEDPW_400US         = 0b01,
-	MAX30100_LEDPW_800US         = 0b10,
-	MAX30100_LEDPW_1600US        = 0b11,
-} max30100_led_pulsewidth_t;
 
-typedef enum
-{
-	MAX30100_LEDCURRENT_0MA      = 0b0000,
-	MAX30100_LEDCURRENT_4_4MA    = 0b0001,
-	MAX30100_LEDCURRENT_7_6MA    = 0b0010,
-	MAX30100_LEDCURRENT_11MA     = 0b0011,
-	MAX30100_LEDCURRENT_14_2MA   = 0b0100,
-	MAX30100_LEDCURRENT_17_4MA   = 0b0101,
-	MAX30100_LEDCURRENT_20_8MA   = 0b0110,
-	MAX30100_LEDCURRENT_24MA     = 0b0111,
-	MAX30100_LEDCURRENT_27_1MA   = 0b1000,
-	MAX30100_LEDCURRENT_30_6MA   = 0b1001,
-	MAX30100_LEDCURRENT_33_8MA   = 0b1010,
-	MAX30100_LEDCURRENT_37MA     = 0b1011,
-	MAX30100_LEDCURRENT_40_2MA   = 0b1100,
-	MAX30100_LEDCURRENT_43_6MA   = 0b1101,
-	MAX30100_LEDCURRENT_46_8MA   = 0b1110,
-	MAX30100_LEDCURRENT_50MA     = 0b1111,
-} max30100_led_current_t;
-#endif /* MAX30100_H_ */
+void max30100_write_reg(uint8_t addr, uint8_t *buffer, uint32_t bufferlen);
+void max30100_write_reg8(uint8_t addr, uint8_t value);
+void max30100_read_reg(uint8_t addr, uint8_t *buffer, uint32_t buffersize);
+uint8_t max30100_read_reg8(uint8_t addr);
+uint16_t max30100_read_reg16(uint8_t addr);
+float max30100_read_temperature();
+void max30100_init();
+void max30100_read_fifo_data();
+uint32_t max30100_get_raw_values(uint16_t *ir, uint16_t *red);
+void max30100_set_leds_current(LEDCurrent irLedCurrent, LEDCurrent redLedCurrent);
+
+#endif
