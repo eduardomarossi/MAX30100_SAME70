@@ -32,6 +32,7 @@ typedef struct {
 float dc_remover_step(dc_remover_filter* filter, float x);
 float butter_filter_step(butter_filter* filter, float x);
 float pulse_oximeter_get_heart_rate();
+uint32_t pulse_oximeter_begin();
 void pulse_oximeter_set_callback(void (*cb)());
 uint8_t pulse_oximeter_get_spo2();
 void pulse_oximeter_update();

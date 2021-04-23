@@ -42,14 +42,16 @@ int main(void)
 	max30100_init();
 	puts("MAX30100 detected!\r\n");
 	pulse_oximeter_init();
+	pulse_oximeter_begin();
 	pulse_oximeter_set_callback(on_beat);
 	uint16_t ir, red;
 	uint32_t tsLastReport = 0;
 	while (1) {
-		//max30100_read_fifo_data();
+		max30100_read_fifo_data();
 		pulse_oximeter_update();
 		if(systick_get_counter() - tsLastReport > 1000) {
 			printf("Heartrate: %f Spo2: %d\r\n", pulse_oximeter_get_heart_rate(), pulse_oximeter_get_spo2());
 		}
+	
 	}
 }

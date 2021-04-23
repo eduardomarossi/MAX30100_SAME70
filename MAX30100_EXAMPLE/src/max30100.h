@@ -14,7 +14,7 @@
 #define WAIT_TIME   10
 
 /** TWI Bus Clock 100kHz */
-#define TWIHS_CLK  100000
+#define TWIHS_CLK  400000
 
 #define MAX30100_I2C      TWIHS0
 #define MAX30100_I2C_ID   ID_TWIHS0

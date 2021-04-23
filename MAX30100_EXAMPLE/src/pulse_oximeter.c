@@ -40,18 +40,32 @@ beatdetector beat;
 
 void pulse_oximeter_init() {
 	ir_dc_remover.alpha = DC_REMOVER_ALPHA;
+	ir_dc_remover.dcw = 0;
+	red_dc_remover.dcw = 0;
 	red_dc_remover.alpha = DC_REMOVER_ALPHA;
+	lpf.v[0] = 0;
+	lpf.v[1] = 0;
 	beatdetector_init(&beat);
+	pulse_state = PULSEOXIMETER_STATE_INIT;
 	tsLastBiasCheck = 0;
 	tsFirstBeatDetected = 0;
 	tsLastBeatDetected = 0;
 	tsLastCurrentAdjustment = 0;
-	redLedCurrentIndex = MAX30100_LED_CURR_27_1MA;
+	redLedCurrentIndex = (uint8_t)MAX30100_LED_CURR_27_1MA;
 	irLedCurrent = MAX30100_LED_CURR_50MA;
+}
+
+uint32_t pulse_oximeter_begin() {
+	max30100_set_leds_current(irLedCurrent, (LEDCurrent)redLedCurrentIndex);
+
+	pulse_state = PULSEOXIMETER_STATE_IDLE;
+
+	return 1;
 }
 
 void pulse_oximeter_check_sample() {
 	uint16_t raw_ir, raw_red;
+
 	while(max30100_get_raw_values(&raw_ir, &raw_red)) {
 		float irACValue = dc_remover_step(&ir_dc_remover, raw_ir);
 		float redACValue = dc_remover_step(&red_dc_remover, raw_red);
@@ -70,7 +84,6 @@ void pulse_oximeter_check_sample() {
 		if (beatDetected && onBeatDetected) {
 			onBeatDetected();
 		}
-		
 	}
 }
 
@@ -94,6 +107,8 @@ void pulse_oximeter_check_current_bias() {
 		if (changed) {
 			max30100_set_leds_current(irLedCurrent, (LEDCurrent)redLedCurrentIndex);
 			tsLastCurrentAdjustment = systick_get_counter();
+			
+			printf("I: %d\r\n", redLedCurrentIndex);
 		}
 
 		tsLastBiasCheck = systick_get_counter();

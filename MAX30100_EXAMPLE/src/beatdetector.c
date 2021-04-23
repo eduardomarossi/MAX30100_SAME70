@@ -10,9 +10,9 @@
 
 void beatdetector_init(beatdetector* beat) {
 	beat->state = BEATDETECTOR_STATE_INIT;
-	beat->threshold = BEATDETECTOR_MIN_THRESHOLD;
-	beat->beatPeriod = 0;
-	beat->lastMaxValue = 0;
+	beat->threshold = BEATDETECTOR_MIN_THRESHOLD * 1.0f;
+	beat->beatPeriod = 0.0f;
+	beat->lastMaxValue = 0.0f;
 	beat->tsLastBeat = 0;
 }
 
@@ -20,15 +20,15 @@ void beatdetector_decrease_threshold(beatdetector* beat)
 {
 	// When a valid beat rate readout is present, target the
 	if (beat->lastMaxValue > 0 && beat->beatPeriod > 0) {
-		beat->threshold -= beat->lastMaxValue * (1.0 - BEATDETECTOR_THRESHOLD_FALLOFF_TARGET) /
-		(beat->beatPeriod / BEATDETECTOR_SAMPLES_PERIOD);
+		beat->threshold -= beat->lastMaxValue * (1.0f - BEATDETECTOR_THRESHOLD_FALLOFF_TARGET) /
+		(beat->beatPeriod / (BEATDETECTOR_SAMPLES_PERIOD * 1.0f));
 		} else {
 		// Asymptotic decay
 		beat->threshold *= BEATDETECTOR_THRESHOLD_DECAY_FACTOR;
 	}
 
 	if (beat->threshold < BEATDETECTOR_MIN_THRESHOLD) {
-		beat->threshold = BEATDETECTOR_MIN_THRESHOLD;
+		beat->threshold = BEATDETECTOR_MIN_THRESHOLD * 1.0f;
 	}
 }
 
@@ -75,7 +75,7 @@ uint32_t beatdetector_check_for_beat(beatdetector* beat, float sample)
 			float delta = systick_get_counter() - beat->tsLastBeat;
 			if (delta) {
 				beat->beatPeriod = BEATDETECTOR_BPFILTER_ALPHA * delta +
-				(1 - BEATDETECTOR_BPFILTER_ALPHA) * beat->beatPeriod;
+				(1.0f - BEATDETECTOR_BPFILTER_ALPHA) * beat->beatPeriod;
 			}
 
 			beat->tsLastBeat = systick_get_counter();
